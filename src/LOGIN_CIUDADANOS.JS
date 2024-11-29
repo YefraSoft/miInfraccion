@@ -11,14 +11,14 @@ export default {
     console.log('Password:', this.password);  // Asegúrate de que la contraseña esté correctamente capturada
   
     try {
-      const response = await axios.post('http://localhost:3000/api/login', {
+      const response = await axios.post('https://backendmiinfraccion-production.up.railway.app/api/login', {
         email: this.email,
         password: this.password,
       });
   
       console.log('Inicio de sesión exitoso:', response.data);
       localStorage.setItem('usuario', JSON.stringify(response.data.usuario));
-      this.$router.push('/dashboard');  // Redirigir al dashboard después del login
+      this.$router.push('/dashboard');
   
     } catch (error) {
       console.error('Error en el inicio de sesión:', error);

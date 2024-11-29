@@ -1,6 +1,11 @@
 <template>
   <div class="dashboard">
     <div class="sidebar">
+      <div class="dark-mode-toggle" @click="toggleDarkMode">
+        <span v-if="isDarkMode">🌙</span>
+        <span v-else>☀️</span>
+      </div>
+
       <h2 class="fade-in-left">Opciones</h2>
       <ul>
         <li @click="showSection('register')" class="fade-in-left">Registrar Vehículo</li>
@@ -30,7 +35,6 @@
             <option value="Aguascalientes">Aguascalientes</option>
             <option value="Baja California">Baja California</option>
             <option value="Jalisco">Jalisco</option>
-            <!-- Añadir los otros estados aquí -->
           </select>
 
           <label for="marca">Marca:</label>
@@ -39,7 +43,6 @@
             <option value="Acura">Acura</option>
             <option value="Alfa Romeo">Alfa Romeo</option>
             <option value="Toyota">Toyota</option>
-            <!-- Añadir las demás marcas aquí -->
           </select>
 
           <label for="color">Color:</label>
@@ -70,6 +73,41 @@
       </div>
     </div>
 
+    <!-- Botón flotante de Report -->
+    <div id="reportCircle" @click="toggleReportBot">🚩</div>
+    <!-- Menú de opciones -->
+    <div v-if="showReportBot" id="reportBot">
+      <h3>¿Qué desea reportar?</h3>
+      <button @click="openReportForm('Vehículo abandonado')">Vehículo abandonado</button>
+      <button @click="openReportForm('Vehículo en mi cochera')">Vehículo en mi cochera</button>
+    </div>
+
+    <!-- Formulario del reporte -->
+    <div v-if="showReportForm" class="report-form-modal">
+      <div class="form-header">
+        <h3>Reporte: {{ reportType }}</h3>
+        <button @click="closeReportForm" class="close-button">✖</button>
+      </div>
+      <form @submit.prevent="submitReport">
+        <label for="numeroExterior">Número Exterior:</label>
+        <input type="text" id="numeroExterior" v-model="reportData.numeroExterior" required />
+
+        <label for="numeroInterior">Número Interior:</label>
+        <input type="text" id="numeroInterior" v-model="reportData.numeroInterior" />
+
+        <label for="calle">Calle:</label>
+        <input type="text" id="calle" v-model="reportData.calle" required />
+
+        <label for="cp">Código Postal:</label>
+        <input type="text" id="cp" v-model="reportData.cp" required />
+
+        <label for="descripcion">Descripción:</label>
+        <textarea id="descripcion" v-model="reportData.descripcion" rows="4" required></textarea>
+
+        <button type="submit" class="cta-button">Enviar Reporte</button>
+      </form>
+    </div>
+
     <!-- Footer -->
     <footer class="footer">
       <p>&copy; {{ currentYear }} {{ userName }} - Derechos reservados</p>
@@ -78,92 +116,396 @@
 </template>
 
 <script>
-import axios from 'axios';
+import axios from "axios";
 
 export default {
-  name: 'DashboardView',
+  name: "DashboardView",
   data() {
     return {
-      userName: 'Usuario',
-      activeSection: 'register',
-      vehiculo: {
-        placas: '',
-        estado: '',
-        marca: '',
-        color: ''
-      },
+      isDarkMode: false,
+      userName: "Usuario",
+      activeSection: "register",
+      vehiculo: { placas: "", estado: "", marca: "", color: "" },
       vehiculos: [],
       currentYear: new Date().getFullYear(),
-      ciudadanoId: null
+      ciudadanoId: null,
+      showReportBot: false,
+      showReportForm: false,
+      reportType: "",
+      reportData: {
+        numeroExterior: "",
+        numeroInterior: "",
+        calle: "",
+        cp: "",
+        descripcion: "",
+      },
     };
   },
   mounted() {
-    const usuario = JSON.parse(localStorage.getItem('usuario'));
+    const usuario = JSON.parse(localStorage.getItem("usuario"));
     if (usuario && usuario.nombre) {
       this.userName = usuario.nombre;
       this.ciudadanoId = usuario.id;
       this.fetchVehiculos();
     } else {
-      this.$router.push('/login');
+      this.$router.push("/login");
     }
   },
   methods: {
     showSection(section) {
       this.activeSection = section;
-      if (section === 'myVehicles') {
+      if (section === "myVehicles") {
         this.fetchVehiculos();
       }
     },
     logout() {
-      console.log('Sesión cerrada');
-      localStorage.removeItem('usuario');
-      this.$router.push('/login');
+      localStorage.removeItem("usuario");
+      this.$router.push("/login");
     },
+
     async registerVehicle() {
       try {
-        const response = await axios.post('http://localhost:3000/api/vehiculos/registrar', {
-          ...this.vehiculo,
-          ciudadano_id: this.ciudadanoId
-        });
-
+        const response = await axios.post(
+          "https://backendmiinfraccion-production.up.railway.app/api/vehiculos/registrar",
+          { ...this.vehiculo, ciudadano_id: this.ciudadanoId }
+        );
         if (response.status === 201) {
           this.vehiculos.push({ ...this.vehiculo });
-          this.vehiculo = { placas: '', estado: '', marca: '', color: '' };
-          alert('Vehículo registrado con éxito');
+          this.vehiculo = { placas: "", estado: "", marca: "", color: "" };
+          alert("Vehículo registrado con éxito");
         }
       } catch (error) {
-        console.error('Error al registrar vehículo:', error);
-        alert('Error al registrar el vehículo.');
+        alert("Error al registrar el vehículo.");
       }
     },
+
     async fetchVehiculos() {
       try {
-        const response = await axios.get(`http://localhost:3000/api/vehiculos/${this.ciudadanoId}`);
+        const response = await axios.get(
+          `https://backendmiinfraccion-production.up.railway.app/api/vehiculos/${this.ciudadanoId}`
+        );
         if (response.status === 200) {
           this.vehiculos = response.data;
         }
       } catch (error) {
-        console.error('Error al obtener vehículos:', error);
-        alert('Error al cargar los vehículos.');
+        alert("Error al cargar los vehículos.");
       }
     },
+
     async deleteVehicle(vehicleId) {
       try {
-        const response = await axios.delete(`http://localhost:3000/api/vehiculos/eliminar/${vehicleId}`);
+        const response = await axios.delete(
+          `https://backendmiinfraccion-production.up.railway.app/api/vehiculos/eliminar/${vehicleId}`
+        );
         if (response.status === 200) {
-          this.vehiculos = this.vehiculos.filter(vehiculo => vehiculo.id !== vehicleId);
-          alert('Vehículo eliminado con éxito');
+          this.vehiculos = this.vehiculos.filter(
+            (vehiculo) => vehiculo.id !== vehicleId
+          );
+          alert("Vehículo eliminado con éxito");
         }
       } catch (error) {
-        console.error('Error al eliminar el vehículo:', error);
-        alert('Error al eliminar el vehículo.');
+        alert("Error al eliminar el vehículo.");
       }
-    }
+    },
+    toggleReportBot() {
+      this.showReportBot = !this.showReportBot;
+    },
+    openReportForm(type) {
+      this.reportType = type;
+      this.showReportBot = false;
+      this.showReportForm = true;
+    },
+    closeReportForm() {
+      this.showReportForm = false;
+      this.reportData = {
+        numeroExterior: "",
+        numeroInterior: "",
+        calle: "",
+        cp: "",
+        descripcion: "",
+      };
+    },
+    submitReport() {
+      alert(`
+        Reporte enviado:
+        - Tipo: ${this.reportType}
+        - Número Exterior: ${this.reportData.numeroExterior}
+        - Número Interior: ${this.reportData.numeroInterior}
+        - Calle: ${this.reportData.calle}
+        - CP: ${this.reportData.cp}
+        - Descripción: ${this.reportData.descripcion}
+      `);
+      this.closeReportForm();
+    },
+    toggleDarkMode() {
+      this.isDarkMode = !this.isDarkMode;
+      const body = document.body;
+      if (this.isDarkMode) {
+        body.classList.add("dark-mode");
+      } else {
+        body.classList.remove("dark-mode");
+      }
+    },
   }
 };
 </script>
-
 <style scoped>
+.dark-mode-toggle {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  width: 50px;
+  height: 50px;
+  background: linear-gradient(45deg, #f44336, #ff9800);
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  z-index: 1000;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.dark-mode-toggle:hover {
+  transform: scale(1.1);
+  box-shadow: 0 8px 15px rgba(0, 0, 0, 0.4);
+}
+
+/* Tema oscuro */
+body.dark-mode {
+  background-color: #121212;
+  color: #e0e0e0;
+}
+
+body.dark-mode .sidebar {
+  background-color: #1e1e1e;
+}
+
+body.dark-mode .content {
+  background-color: #1a1a1a;
+}
+
+body.dark-mode .vehicle-card {
+  background-color: #2a2a2a;
+  color: white;
+}
+
+body.dark-mode .cta-button {
+  background-color: #bb86fc;
+}
+
+body.dark-mode .cta-button:hover {
+  background-color: #7c4dff;
+}
+
+body.dark-mode .delete-button {
+  background-color: #cf6679;
+}
+
+body.dark-mode .delete-button:hover {
+  background-color: #b00020;
+}
+
+
+
+#reportCircle {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  width: 60px;
+  height: 60px;
+  background: linear-gradient(45deg, #f44336, #ff5722);
+  color: white;
+  font-size: 24px;
+  font-weight: bold;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  cursor: pointer;
+  box-shadow: 0 8px 15px rgba(0, 0, 0, 0.3);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+#reportCircle:hover {
+  transform: scale(1.1);
+  box-shadow: 0 12px 20px rgba(0, 0, 0, 0.4);
+}
+
+/* Menú flotante */
+#reportBot {
+  position: fixed;
+  bottom: 100px;
+  right: 20px;
+  width: 250px;
+  background: #ffffff;
+  border-radius: 15px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+  padding: 15px;
+  z-index: 1001;
+  animation: fadeIn 0.3s ease;
+}
+
+#reportBot h3 {
+  margin: 0 0 10px;
+  font-size: 18px;
+  font-weight: bold;
+  color: #333;
+}
+
+#reportBot button {
+  width: 100%;
+  padding: 10px;
+  margin-bottom: 10px;
+  border: none;
+  border-radius: 10px;
+  background: #007bff;
+  color: white;
+  font-size: 16px;
+  cursor: pointer;
+  transition: background 0.3s ease;
+}
+
+#reportBot button:hover {
+  background: #0056b3;
+}
+
+/* Formulario del reporte */
+.report-form-modal {
+  position: fixed;
+  top: 20%;
+  left: 50%;
+  transform: translate(-50%, -20%);
+  width: 400px;
+  background: white;
+  border-radius: 15px;
+  box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2);
+  padding: 20px;
+  z-index: 1002;
+  animation: slideIn 0.3s ease;
+}
+
+.form-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.form-header h3 {
+  margin: 0;
+  font-size: 20px;
+  color: #333;
+}
+
+.close-button {
+  background: none;
+  border: none;
+  font-size: 18px;
+  color: #666;
+  cursor: pointer;
+  transition: color 0.3s ease;
+}
+
+.close-button:hover {
+  color: #f44336;
+}
+
+form label {
+  display: block;
+  margin: 10px 0 5px;
+  font-weight: bold;
+  color: #555;
+}
+
+form input,
+form textarea {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 10px;
+  font-size: 14px;
+  box-sizing: border-box;
+}
+
+form input:focus,
+form textarea:focus {
+  border-color: #007bff;
+  outline: none;
+  box-shadow: 0 0 5px rgba(0, 123, 255, 0.5);
+}
+
+.cta-button {
+  margin-top: 20px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  padding: 10px;
+  border-radius: 10px;
+  font-size: 16px;
+  cursor: pointer;
+  transition: background 0.3s ease;
+}
+
+.cta-button:hover {
+  background-color: #0056b3;
+}
+
+/* Animaciones */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+form label {
+  display: block;
+  margin: 10px 0 5px;
+}
+
+form input,
+form textarea {
+  width: 100%;
+  padding: 5px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+}
+
+.cta-button {
+  margin-top: 10px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  padding: 10px;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.cta-button:hover {
+  background-color: #0056b3;
+}
+
 .dashboard {
   display: flex;
   min-height: 100vh;
@@ -245,6 +587,7 @@ export default {
   0% {
     opacity: 0;
   }
+
   100% {
     opacity: 1;
   }

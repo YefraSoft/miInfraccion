@@ -13,7 +13,7 @@ export default {
           };
       
           // Realizar la solicitud POST al backend
-          const response = await axios.post('http://localhost:3000/api/vehiculos/registrar', vehiculo);
+          const response = await axios.post('https://backendmiinfraccion-production.up.railway.app/api/vehiculos/registrar', vehiculo);
           
           // Limpiar el formulario después de registrar el vehículo
           this.vehiculo = { placas: '', estado: '', marca: '', color: '' };

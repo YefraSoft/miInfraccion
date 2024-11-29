@@ -7,7 +7,7 @@ export default {
 
     try {
       // Enviar solicitud POST al backend con axios
-      const response = await axios.post('http://localhost:3000/api/users/create', {
+      const response = await axios.post('https://backendmiinfraccion-production.up.railway.app/api/users/create', {
         nombre: nombre,
         email: email,
         password: password

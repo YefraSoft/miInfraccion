@@ -3,7 +3,7 @@ import axios from 'axios';
 export default {
   async loginAgent(agentNumber, agentPassword) {
     try {
-      const response = await axios.post('http://localhost:3000/api/agent/login', {
+      const response = await axios.post('https://backendmiinfraccion-production.up.railway.app/api/agent/login', {
         numero_agente: agentNumber,
         password: agentPassword
       });
